@@ -28,20 +28,27 @@ function defaults() {
   };
 }
 
-export let state = load();
+// Starts empty. app.js either loads local data (no cloud configured) or
+// hands over the signed-in user's cloud data via replaceState().
+export let state = defaults();
 
-function load() {
+export function readLocal() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return defaults();
-    return migrate(JSON.parse(raw));
+    return raw ? migrate(JSON.parse(raw)) : null;
   } catch (err) {
     console.error('Could not read saved data', err);
-    return defaults();
+    return null;
   }
 }
+export function clearLocal() {
+  try { localStorage.removeItem(KEY); } catch { /* ignore */ }
+}
+export function initLocal() {
+  state = readLocal() || defaults();
+}
 
-function migrate(s) {
+export function migrate(s) {
   const d = defaults();
   s.settings = { ...d.settings, ...(s.settings || {}) };
   s.settings.increment = { ...d.settings.increment, ...(s.settings.increment || {}) };
@@ -54,20 +61,26 @@ function migrate(s) {
   return s;
 }
 
+// Where saves go. Defaults to this browser; cloud mode swaps in Firestore.
+let persister = (s) => {
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (err) { console.error(err); }
+};
+let delay = 150;
+export function setPersister(fn, debounceMs = 600) { persister = fn; delay = debounceMs; }
+
 let saveTimer = null;
+export const hasPendingSave = () => saveTimer !== null;
 export function save(now = false) {
   clearTimeout(saveTimer);
-  const write = () => {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (err) { console.error(err); }
-  };
-  if (now) write(); else saveTimer = setTimeout(write, 150);
+  const write = () => { saveTimer = null; persister(state); };
+  if (now) write(); else saveTimer = setTimeout(write, delay);
 }
-window.addEventListener('pagehide', () => save(true));
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(true); });
+window.addEventListener('pagehide', () => { if (saveTimer) save(true); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) save(true); });
 
-export function replaceState(next) {
+export function replaceState(next, { persist = true } = {}) {
   state = migrate(next);
-  save(true);
+  if (persist) save(true);
 }
 
 export function resetAll() {

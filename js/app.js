@@ -3,6 +3,7 @@ import { save, exById, routineById, workoutById, fmtW, unit, uid } from './store
 import { $, $$, esc, toast, relDay, daysSince, fmtDate, fmtTime, fmtDur, fmtMins, fmtNum, download, openSheet, closeSheet, confirmSheet, primeAudio, beep } from './ui.js';
 import { lineChart } from './chart.js';
 import { MUSCLES, STARTER_PLANS } from './seed.js';
+import * as Cloud from './sync.js';
 
 const view = $('#view');
 const st = () => S.state; // live binding helper after imports/resets
@@ -22,7 +23,9 @@ const routes = [
 ];
 
 let currentPath = null;
+let appReady = false; // nothing renders until data is loaded (and the user is signed in)
 function route() {
+  if (!appReady) return;
   const path = location.hash.replace(/^#/, '') || '/';
   for (const [re, fn, tab] of routes) {
     const m = path.match(re);
@@ -947,9 +950,19 @@ function renderSettings() {
       <div class="setting"><span>Bar weight</span><input class="num small-input" id="set-bar" inputmode="decimal" value="${s.bar[s.unit]}"> <span class="muted">${s.unit}</span></div>
     </section>
 
+    ${Cloud.enabled && Cloud.currentUser() ? `<h2 class="section-label">Account</h2>
+    <section class="card">
+      <div class="account">
+        ${Cloud.currentUser().photoURL ? `<img src="${esc(Cloud.currentUser().photoURL)}" alt="" width="40" height="40" referrerpolicy="no-referrer">` : ''}
+        <span class="grow"><strong>${esc(Cloud.currentUser().displayName || 'Signed in')}</strong><span class="muted small block">${esc(Cloud.currentUser().email || '')}</span></span>
+      </div>
+      <p class="muted small">Your workouts sync to your Google account. Sign in on any phone to pick up where you left off. An offline copy stays on this device so the app works with no signal.</p>
+      <button class="btn ghost block" data-action="sign-out">Sign out</button>
+    </section>` : ''}
+
     <h2 class="section-label">Your data</h2>
     <section class="card">
-      <p class="muted small">Everything is stored on this device only. Export a backup now and then, especially before clearing your browser or switching phones.</p>
+      <p class="muted small">${Cloud.enabled ? 'Download a copy whenever you like. Import replaces everything in your account.' : 'Everything is stored on this device only. Export a backup now and then, especially before clearing your browser or switching phones.'}</p>
       <div class="stack">
         <button class="btn ghost block" data-action="export-json">Export backup (JSON)</button>
         <button class="btn ghost block" data-action="export-csv">Export sets (CSV for spreadsheets)</button>
@@ -976,11 +989,11 @@ function renderSettings() {
     const f = e.target.files[0]; if (!f) return;
     try {
       const text = await f.text();
-      if (!(await confirmSheet({ title: 'Replace all data with this backup?', body: 'Your current data on this device will be overwritten.', confirm: 'Import', danger: true }))) return;
+      if (!(await confirmSheet({ title: 'Replace all data with this backup?', body: Cloud.enabled ? 'Everything in your account will be replaced with this file.' : 'Your current data on this device will be overwritten.', confirm: 'Import', danger: true }))) return;
       S.importJSON(text); toast('Backup restored.'); go('#/');
     } catch (err) { toast(err.message || 'Could not read that file.'); }
   });
-  navigator.storage?.persisted?.().then((p) => {
+  if (!Cloud.enabled) navigator.storage?.persisted?.().then((p) => {
     const el = $('#persist-status');
     if (el) el.textContent = p ? 'Storage is marked persistent, so the browser will not clear it on its own.' : 'Tip: install the app to the home screen so the browser keeps your data.';
   });
@@ -1077,8 +1090,14 @@ document.addEventListener('click', async (e) => {
     case 'rest-stop': return stopRest();
     case 'export-json': return download(`liftlog-backup-${new Date().toISOString().slice(0, 10)}.json`, S.exportJSON());
     case 'export-csv': return download(`liftlog-sets-${new Date().toISOString().slice(0, 10)}.csv`, S.exportCSV(), 'text/csv');
+    case 'sign-out': {
+      if (await confirmSheet({ title: 'Sign out?', body: 'Your workouts stay in your account. The offline copy on this device is removed.', confirm: 'Sign out' })) {
+        stopRest(); await Cloud.signOutAndWipe(); location.replace(location.pathname + location.search);
+      }
+      return;
+    }
     case 'reset': {
-      if (await confirmSheet({ title: 'Erase everything?', body: 'All workouts, routines and custom exercises on this device will be deleted. Export a backup first if you want one.', confirm: 'Erase', danger: true })) {
+      if (await confirmSheet({ title: 'Erase everything?', body: `All workouts, routines and custom exercises ${Cloud.enabled ? 'in your account' : 'on this device'} will be deleted. Export a backup first if you want one.`, confirm: 'Erase', danger: true })) {
         S.resetAll(); stopRest(); toast('All data erased.'); go('#/');
       }
     }
@@ -1087,8 +1106,77 @@ document.addEventListener('click', async (e) => {
 
 /* ================= boot ================= */
 
-route();
-if (st().rest) runRest();
+function start() {
+  appReady = true;
+  document.body.classList.remove('signed-out', 'loading');
+  route();
+  if (st().rest) runRest();
+}
+
+function renderSignIn(error = '') {
+  appReady = false;
+  document.body.classList.add('signed-out');
+  document.body.classList.remove('loading');
+  view.innerHTML = `
+    <section class="signin">
+      <img class="signin-icon" src="icons/icon.svg" alt="" width="88" height="88">
+      <h1 class="display">Liftlog</h1>
+      <p class="lead muted">Every weight you've lifted, saved to your account. Sign in and it picks up on any phone.</p>
+      <button class="btn google block" data-action="sign-in">
+        <svg viewBox="0 0 48 48" aria-hidden="true" class="g-logo"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+        Sign in with Google
+      </button>
+      <p class="signin-error" role="alert">${esc(error)}</p>
+    </section>`;
+}
+
+async function onSignedIn(user) {
+  document.body.classList.add('loading');
+  view.innerHTML = '<div class="splash"><img src="icons/icon.svg" alt="" width="72" height="72"><p class="muted small">Loading your workouts</p></div>';
+  const local = S.readLocal();
+  try {
+    const { state, migrated } = await Cloud.attach({
+      local,
+      isBusy: () => S.hasPendingSave(),
+      applyRemote: ({ user: u, workouts }) => {
+        const cur = S.state;
+        if (u) for (const k of ['settings', 'exercises', 'routines', 'active', 'rest', 'createdAt', 'version']) if (k in u) cur[k] = u[k];
+        if (workouts) cur.workouts = workouts;
+        S.migrate(cur);
+        if (!document.querySelector('.set-row input:focus, .field input:focus, textarea:focus')) route();
+        if (cur.rest) runRest(); else if (!$('#restbar').hidden) stopRest();
+      },
+    });
+    S.replaceState(state, { persist: false });
+    S.setPersister((s) => Cloud.push(s), 600);
+    if (local) S.clearLocal();
+    start();
+    if (migrated) toast(`Moved ${migrated} workout${migrated > 1 ? 's' : ''} from this phone to your account.`, 4000);
+  } catch (err) {
+    console.error(err);
+    renderSignIn('Could not load your data. Check your connection and try again.');
+  }
+}
+
+if (Cloud.enabled) {
+  document.body.classList.add('loading');
+  view.innerHTML = '<div class="splash"><img src="icons/icon.svg" alt="" width="72" height="72"></div>';
+  Cloud.init({
+    onSignedIn,
+    onSignedOut: () => renderSignIn(),
+    onError: (msg) => renderSignIn(msg),
+  });
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-action="sign-in"]');
+    if (!b) return;
+    b.disabled = true;
+    try { await Cloud.signIn(); } catch (err) { renderSignIn(err.message); }
+    finally { b.disabled = false; }
+  });
+} else {
+  S.initLocal();
+  start();
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

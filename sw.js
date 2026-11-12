@@ -1,8 +1,9 @@
 // Offline-first service worker. Bump VERSION when shipping changes.
-const VERSION = 'liftlog-v3';
+const VERSION = 'liftlog-v4';
 const ASSETS = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/chart.js', 'js/seed.js',
+  'js/sync.js', 'js/firebase-config.js', 'js/vendor/firebase.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 
