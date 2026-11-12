@@ -1,5 +1,5 @@
 // Offline-first service worker. Bump VERSION when shipping changes.
-const VERSION = 'liftlog-v4';
+const VERSION = 'liftlog-v5';
 const ASSETS = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/chart.js', 'js/seed.js',
