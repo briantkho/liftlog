@@ -1,10 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#111214"/>
-  <g fill="#d4f24a">
-    <rect x="72" y="236" width="368" height="40" rx="12"/>
-    <rect x="112" y="160" width="44" height="192" rx="14"/>
-    <rect x="356" y="160" width="44" height="192" rx="14"/>
-    <rect x="164" y="190" width="30" height="132" rx="10"/>
-    <rect x="318" y="190" width="30" height="132" rx="10"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#202226"/>
+      <stop offset="1" stop-color="#0c0d0f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.55">
+      <stop offset="0" stop-color="#d4f24a" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#d4f24a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="volt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e4ff6a"/>
+      <stop offset="1" stop-color="#bfe02c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="114" fill="url(#glow)"/>
+  <g transform="translate(256 256) scale(1.08) rotate(-24)">
+    <g fill="url(#volt)">
+      <!-- bar -->
+      <rect x="-190" y="-13" width="380" height="26" rx="13"/>
+      <!-- left plates: big inside, small outside -->
+      <rect x="-128" y="-92" width="40" height="184" rx="14"/>
+      <rect x="-170" y="-62" width="30" height="124" rx="12"/>
+      <!-- right plates -->
+      <rect x="88" y="-92" width="40" height="184" rx="14"/>
+      <rect x="140" y="-62" width="30" height="124" rx="12"/>
+    </g>
   </g>
 </svg>
