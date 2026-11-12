@@ -36,7 +36,7 @@ function route() {
       if (!same) closeSheet(true);
       $$('.tabbar a').forEach((a) => a.classList.toggle('active', a.dataset.tab === tab));
       fn(...m.slice(1).map(decodeURIComponent));
-      if (!same) { window.scrollTo(0, 0); view.focus({ preventScroll: true }); }
+      if (!same) { view.scrollTo(0, 0); view.focus({ preventScroll: true }); }
       return;
     }
   }

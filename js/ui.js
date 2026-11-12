@@ -66,15 +66,50 @@ export function openSheet(html, { onMount, onClose, tall = false } = {}) {
   root.innerHTML = `
     <div class="sheet-backdrop" data-sheet-close></div>
     <div class="sheet${tall ? ' tall' : ''}" role="dialog" aria-modal="true">
-      <div class="sheet-grip" aria-hidden="true"></div>
+      <button class="sheet-grip" data-sheet-close aria-label="Close" tabindex="-1"></button>
+      <button class="icon-btn sheet-close" data-sheet-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       ${html}
     </div>`;
   requestAnimationFrame(() => root.classList.add('open'));
   sheetClose = onClose || null;
   const sheet = $('.sheet', root);
+  enableSwipeDown(sheet, $('.sheet-backdrop', root));
   onMount?.(sheet);
   return sheet;
 }
+// Drag a sheet down to dismiss it. Only kicks in when the sheet is scrolled to the top
+// and the gesture is mostly vertical, so horizontal plate rows and inner lists still scroll.
+function enableSwipeDown(sheet, backdrop) {
+  let x0 = 0, y0 = null, t0 = 0, dy = 0, dragging = false;
+  sheet.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1 || sheet.scrollTop > 0) { y0 = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0; dragging = false;
+  }, { passive: true });
+  sheet.addEventListener('touchmove', (e) => {
+    if (y0 == null) return;
+    const dx = e.touches[0].clientX - x0, y = e.touches[0].clientY - y0;
+    if (!dragging) {
+      if (y > 10 && y > Math.abs(dx) * 1.2) { dragging = true; sheet.classList.add('dragging'); document.activeElement?.blur?.(); }
+      else if (Math.abs(dx) > 10 || y < -6) { y0 = null; return; }
+      else return;
+    }
+    e.preventDefault();
+    dy = Math.max(0, y);
+    sheet.style.transform = `translateY(${dy}px)`;
+    backdrop.style.opacity = String(Math.max(0, 1 - dy / (sheet.offsetHeight || 400)));
+  }, { passive: false });
+  const end = () => {
+    if (!dragging) { y0 = null; return; }
+    sheet.classList.remove('dragging');
+    const fast = dy / Math.max(1, Date.now() - t0) > 0.5;
+    if (dy > 110 || (fast && dy > 40)) { sheet.style.transform = 'translateY(100%)'; backdrop.style.opacity = ''; closeSheet(); }
+    else { sheet.style.transform = ''; backdrop.style.opacity = ''; }
+    dragging = false; y0 = null;
+  };
+  sheet.addEventListener('touchend', end);
+  sheet.addEventListener('touchcancel', end);
+}
+
 export function closeSheet(immediate = false) {
   const root = $('#sheet-root');
   if (!root.innerHTML) return;
