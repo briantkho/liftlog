@@ -6,6 +6,7 @@ import { MUSCLES, STARTER_PLANS, EQUIPMENT } from './seed.js';
 import { openWeightMath } from './calc.js';
 import * as Cloud from './sync.js';
 
+const APP_VERSION = 'v10'; // keep in step with VERSION in sw.js
 const view = $('#view');
 const st = () => S.state; // live binding helper after imports/resets
 
@@ -953,7 +954,7 @@ function renderSettings() {
 
     <h2 class="section-label">Danger zone</h2>
     <section class="card"><button class="btn danger block" data-action="reset">Erase all data</button></section>
-    <p class="muted small center">Liftlog · ${st().workouts.length} workouts stored</p>
+    <p class="muted small center">Liftlog ${APP_VERSION} · ${st().workouts.length} workouts stored</p>
   `;
   $('#set-auto').addEventListener('change', (e) => { s.autoRest = e.target.checked; save(); });
   $('#set-inc').addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (v > 0) { s.increment[s.unit] = v; save(); } });
@@ -1157,11 +1158,21 @@ if (Cloud.enabled) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then((reg) => {
+    // When a new version takes over, reload once so the whole app runs on matching files.
+    let reloading = false;
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      reloading = true;
+      S.save(true);
+      location.reload();
+    });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+      reg.update().catch(() => {});
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         nw?.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) toast('Update ready. Reopen the app to get it.', 5000);
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) toast('Updating…', 2000);
         });
       });
     }).catch(() => {});

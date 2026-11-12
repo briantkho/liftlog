@@ -1,5 +1,7 @@
 // Offline-first service worker. Bump VERSION when shipping changes.
-const VERSION = 'liftlog-v9';
+// Every request for app files skips the browser's HTTP cache (GitHub Pages lets browsers
+// keep files for 10 minutes), so an update never mixes new HTML with old CSS or JS.
+const VERSION = 'liftlog-v10';
 const ASSETS = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/chart.js', 'js/seed.js',
@@ -8,7 +10,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(VERSION)
+      .then((c) => c.addAll(ASSETS.map((a) => new Request(a, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -39,9 +45,10 @@ self.addEventListener('fetch', (e) => {
   }
   if (url.origin !== location.origin) return;
 
-  // App files: network first so updates land quickly, cache as fallback for the gym basement.
+  // App files: network first (revalidated, never from the HTTP cache) so every file comes
+  // from the same deploy. The cache is the fallback for no signal in the gym.
   e.respondWith(
-    fetch(req)
+    fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' })
       .then((res) => {
         if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); }
         return res;
