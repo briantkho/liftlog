@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Liftlog</title>
+  <meta name="description" content="Track workouts, remember your weights, and hit PRs.">
+  <meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f4f3ef" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Liftlog">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="view" tabindex="-1"></main>
+
+  <div id="restbar" class="restbar" hidden>
+    <button class="restbar-adj" data-action="rest-adj" data-delta="-15" aria-label="Subtract 15 seconds">−15</button>
+    <div class="restbar-main">
+      <span class="restbar-label">Rest</span>
+      <span id="rest-time" class="restbar-time">0:00</span>
+    </div>
+    <button class="restbar-adj" data-action="rest-adj" data-delta="15" aria-label="Add 15 seconds">+15</button>
+    <button class="restbar-skip" data-action="rest-stop">Skip</button>
+  </div>
+
+  <nav class="tabbar" aria-label="Main">
+    <a href="#/" data-tab="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5"/></svg><span>Today</span></a>
+    <a href="#/workout" data-tab="workout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12h19M6 7.5v9M18 7.5v9M3.5 9.5v5M20.5 9.5v5"/></svg><span>Workout</span></a>
+    <a href="#/history" data-tab="history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4zM4 9.5h16M8.5 3v4M15.5 3v4"/></svg><span>History</span></a>
+    <a href="#/progress" data-tab="progress"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 19.5 9 13l4 3.5 7.5-9M15.5 7.5h5v5"/></svg><span>Progress</span></a>
+    <a href="#/settings" data-tab="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>More</span></a>
+  </nav>
+
+  <div id="sheet-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
