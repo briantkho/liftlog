@@ -2,7 +2,8 @@ import * as S from './store.js';
 import { save, exById, routineById, workoutById, fmtW, unit, uid } from './store.js';
 import { $, $$, esc, toast, relDay, daysSince, fmtDate, fmtTime, fmtDur, fmtMins, fmtNum, download, openSheet, closeSheet, confirmSheet, primeAudio, beep } from './ui.js';
 import { lineChart } from './chart.js';
-import { MUSCLES, STARTER_PLANS } from './seed.js';
+import { MUSCLES, STARTER_PLANS, EQUIPMENT } from './seed.js';
+import { openWeightMath } from './calc.js';
 import * as Cloud from './sync.js';
 
 const view = $('#view');
@@ -58,6 +59,7 @@ const icon = {
   down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
   x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   trophy: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5v1.5A3.5 3.5 0 0 0 8 11M16 6h3.5v1.5A3.5 3.5 0 0 1 16 11M12 13v4M8.5 20h7M10 17h4"/></svg>',
+  calc: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8 7h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>',
   flame: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c-3.6 0-6-2.4-6-5.6 0-3.5 3-5.4 3.6-8.9C12 8 13 10 13 11.5c1-.6 1.6-1.8 1.7-3 2 1.4 3.3 4 3.3 6.9 0 3.2-2.4 5.6-6 5.6z"/></svg>',
 };
 
@@ -274,6 +276,7 @@ function renderWorkout() {
         <button class="title-btn" data-action="rename-workout">${esc(w.name)}</button>
         <span class="clock mono" id="clock">${editing ? fmtDate(w.start) : fmtDur(Date.now() - w.start)}</span>
       </div>
+      <button class="icon-btn" data-action="weight-math" aria-label="Weight math">${icon.calc}</button>
       <button class="btn primary sm" data-action="finish">${editing ? 'Save' : 'Finish'}</button>
     </header>
     <div id="entries">${w.entries.map(entryCard).join('')}</div>
@@ -326,7 +329,7 @@ function entryCard(e) {
     }).join('')}
     <div class="entry-foot">
       <button class="link" data-action="add-set" data-entry="${e.id}">${icon.plus} Add set</button>
-      ${!isReps ? `<button class="link" data-action="plates" data-entry="${e.id}">Plates</button>` : ''}
+      ${!isReps ? `<button class="link" data-action="weight-math" data-entry="${e.id}">${icon.calc} Weight math</button>` : ''}
     </div>
   </section>`;
 }
@@ -568,39 +571,6 @@ function addExercise() {
   });
 }
 
-function platesSheet(entryId) {
-  const e = st().active.entries.find((x) => x.id === entryId);
-  const first = e.sets.find((s) => !s.done && !s.warmup) || e.sets[e.sets.length - 1];
-  const sg = S.suggest(e.exerciseId, { sets: e.targetSets, repMin: e.repMin, repMax: e.repMax });
-  const start = first?.w ?? sg.w;
-  const u = unit();
-  const plates = u === 'kg' ? [25, 20, 15, 10, 5, 2.5, 1.25] : [45, 35, 25, 10, 5, 2.5];
-  const calc = (total, bar) => {
-    let side = (total - bar) / 2;
-    if (side < 0) return null;
-    const out = [];
-    for (const p of plates) while (side >= p - 1e-6) { out.push(p); side -= p; }
-    return { out, left: Math.round(side * 2 * 100) / 100 };
-  };
-  const draw = (sh) => {
-    const total = parseFloat($('#pl-total', sh).value), bar = parseFloat($('#pl-bar', sh).value);
-    const res = isNaN(total) ? null : calc(total, bar || 0);
-    $('#pl-out', sh).innerHTML = !res ? '<p class="muted">Weight is lighter than the bar.</p>'
-      : !res.out.length ? '<p class="muted">Just the bar.</p>'
-      : `<div class="plates">${res.out.map((p) => `<span class="plate" style="--h:${40 + (p / plates[0]) * 60}%">${p}</span>`).join('')}</div>
-         <p class="muted small">Per side: ${res.out.join(' + ')}${res.left ? ` (${res.left} ${u} can't be made)` : ''}</p>`;
-  };
-  openSheet(`
-    <h2 class="sheet-title">Plate math</h2>
-    <div class="two-col">
-      <label class="field"><span class="field-label">Total (${u})</span><input id="pl-total" class="num" inputmode="decimal" value="${start != null ? fmtW(start) : ''}"></label>
-      <label class="field"><span class="field-label">Bar (${u})</span><input id="pl-bar" class="num" inputmode="decimal" value="${st().settings.bar[u]}"></label>
-    </div>
-    <div id="pl-out"></div>`, {
-    onMount: (sh) => { draw(sh); sh.addEventListener('input', () => draw(sh)); },
-  });
-}
-
 /* ================= exercise picker ================= */
 
 function exercisePicker(onPick) {
@@ -613,7 +583,7 @@ function exercisePicker(onPick) {
       .filter((e) => !e.archived && (filter === 'All' || (filter === 'Recent' ? recent.has(e.id) : e.muscle === filter)) && (!ql || e.name.toLowerCase().includes(ql)))
       .sort((a, b) => filter === 'Recent' ? recent.get(b.id) - recent.get(a.id) : a.name.localeCompare(b.name));
     $('#pk-list', sh).innerHTML = list.map((e) => `<li><button class="list-row" data-pick="${esc(e.id)}">
-        <span class="grow"><strong>${esc(e.name)}</strong><span class="muted small block">${esc(e.muscle)}${recent.has(e.id) ? ' · ' + relDay(recent.get(e.id)) : ''}</span></span>
+        <span class="grow"><strong>${esc(e.name)}</strong><span class="muted small block">${esc(e.muscle)} · ${esc(EQUIPMENT[e.equipment] || 'Other')}${recent.has(e.id) ? ' · ' + relDay(recent.get(e.id)) : ''}</span></span>
         <span class="chev">${icon.plus}</span></button></li>`).join('')
       + (q && !list.some((e) => e.name.toLowerCase() === ql) ? `<li><button class="list-row create" data-create><span class="grow"><strong>Create "${esc(q)}"</strong><span class="muted small block">New exercise</span></span></button></li>` : '')
       || '<li class="empty small">Nothing matches.</li>';
@@ -642,7 +612,7 @@ function exercisePicker(onPick) {
 
 function editExerciseSheet(ex, presetName = '', onSaved) {
   const isNew = !ex;
-  const e = ex || { name: presetName, muscle: 'Other', kind: 'weight', repMin: 8, repMax: 12 };
+  const e = ex || { name: presetName, muscle: 'Other', kind: 'weight', equipment: 'other', repMin: 8, repMax: 12 };
   const r = S.repRange(e);
   openSheet(`
     <h2 class="sheet-title">${isNew ? 'New exercise' : 'Edit exercise'}</h2>
@@ -651,6 +621,7 @@ function editExerciseSheet(ex, presetName = '', onSaved) {
       <label class="field"><span class="field-label">Muscle group</span><select id="ex-muscle">${MUSCLES.map((m) => `<option ${m === e.muscle ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
       <label class="field"><span class="field-label">Type</span><select id="ex-kind"><option value="weight" ${e.kind === 'weight' ? 'selected' : ''}>Weight × reps</option><option value="reps" ${e.kind === 'reps' ? 'selected' : ''}>Bodyweight reps</option></select></label>
     </div>
+    <label class="field"><span class="field-label">Equipment</span><select id="ex-equip">${Object.entries(EQUIPMENT).map(([k, l]) => `<option value="${k}" ${k === e.equipment ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <div class="three-col">
       <label class="field"><span class="field-label">Min reps</span><input id="ex-min" class="num" inputmode="numeric" value="${r.min}"></label>
       <label class="field"><span class="field-label">Max reps</span><input id="ex-max" class="num" inputmode="numeric" value="${r.max}"></label>
@@ -669,7 +640,7 @@ function editExerciseSheet(ex, presetName = '', onSaved) {
         const min = parseInt($('#ex-min', sh).value, 10) || 8;
         const max = Math.max(min, parseInt($('#ex-max', sh).value, 10) || 12);
         const incRaw = $('#ex-inc', sh).value.trim();
-        const data = { name, muscle: $('#ex-muscle', sh).value, kind: $('#ex-kind', sh).value, repMin: min, repMax: max, inc: incRaw === '' ? undefined : parseFloat(incRaw) };
+        const data = { name, muscle: $('#ex-muscle', sh).value, kind: $('#ex-kind', sh).value, equipment: $('#ex-equip', sh).value, repMin: min, repMax: max, inc: incRaw === '' ? undefined : parseFloat(incRaw) };
         let saved;
         if (isNew) {
           let id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || uid();
@@ -840,11 +811,12 @@ function renderExercise(id) {
 
   view.innerHTML = `
     ${header(ex.name, { back: '#/progress', right: `<button class="btn ghost sm" data-action="edit-exercise" data-id="${esc(ex.id)}">Edit</button>` })}
-    <p class="muted center small">${esc(ex.muscle)} · ${r.min} to ${r.max} reps${ex.inc != null ? ` · +${ex.inc} ${unit()} jumps` : ''}</p>
+    <p class="muted center small">${esc(ex.muscle)} · ${esc(EQUIPMENT[ex.equipment] || 'Other')} · ${r.min} to ${r.max} reps${ex.inc != null ? ` · +${ex.inc} ${unit()} jumps` : ''}</p>
     <section class="card next-time">
       <p class="eyebrow">Next time</p>
       <p class="next-line">${sg.w ? `<strong>${fmtW(sg.w)} ${unit()}</strong> × ${sg.r}+` : isReps ? `<strong>${sg.r} reps</strong>` : '<strong>Pick a starting weight</strong>'}</p>
       <p class="muted small">${esc(sg.note)}</p>
+      ${!isReps ? `<button class="link" data-action="weight-math" data-ex="${esc(ex.id)}">${icon.calc} Weight math</button>` : ''}
     </section>
     <div class="tiles">
       <div class="tile"><span class="tile-label">Heaviest</span><span class="tile-val">${rec.topW ? fmtW(rec.topW.w) : '-'}<small>${rec.topW ? ' ' + unit() + ' × ' + rec.topW.r : ''}</small></span><span class="tile-sub">${rec.topW ? fmtDate(rec.topW.date, { month: 'short', day: 'numeric' }) : ''}</span></div>
@@ -947,6 +919,7 @@ function renderSettings() {
       <div class="setting"><span>Rest timer<span class="muted small block">Starts when you check off a set</span></span><div class="stepper"><button data-action="rest-def" data-d="-15" aria-label="Shorter">−</button><strong>${fmtDur(s.restSeconds * 1000)}</strong><button data-action="rest-def" data-d="15" aria-label="Longer">+</button></div></div>
       <div class="setting"><span>Auto-start rest timer</span><label class="switch"><input type="checkbox" id="set-auto" ${s.autoRest ? 'checked' : ''}><span></span></label></div>
       <div class="setting"><span>Default weight jump<span class="muted small block">Added when you hit the top of your rep range</span></span><input class="num small-input" id="set-inc" inputmode="decimal" value="${s.increment[s.unit]}"> <span class="muted">${s.unit}</span></div>
+      <div class="setting"><span>Weight calculator<span class="muted small block">Plates, warm-ups, percentages, lb and kg</span></span><button class="btn ghost sm" data-action="weight-math">${icon.calc} Open</button></div>
       <div class="setting"><span>Bar weight</span><input class="num small-input" id="set-bar" inputmode="decimal" value="${s.bar[s.unit]}"> <span class="muted">${s.unit}</span></div>
     </section>
 
@@ -1051,7 +1024,10 @@ document.addEventListener('click', async (e) => {
     case 'rename-workout': return renameWorkout();
     case 'finish': return finishWorkout();
     case 'add-exercise': return addExercise();
-    case 'plates': return platesSheet(el.dataset.entry);
+    case 'weight-math': {
+      const entry = el.dataset.entry && s.active?.entries.find((x) => x.id === el.dataset.entry);
+      return openWeightMath({ entry, exerciseId: el.dataset.ex || null, onApply: () => (entry ? rerenderEntry(entry.id) : null) });
+    }
     case 'session-menu': return sessionMenu(el.dataset.id);
     case 'repeat': return repeatWorkout(el.dataset.id);
     case 'metric': chartMetric = el.dataset.m; return rerender();

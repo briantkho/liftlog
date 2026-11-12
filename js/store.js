@@ -18,6 +18,7 @@ function defaults() {
       autoRest: true,
       increment: { lb: 5, kg: 2.5 },
       bar: { lb: 45, kg: 20 },
+      plates: { lb: [45, 35, 25, 10, 5, 2.5], kg: [25, 20, 15, 10, 5, 2.5, 1.25] },
     },
     exercises: SEED_EXERCISES.map((e) => ({ ...e })),
     routines: [],
@@ -53,7 +54,17 @@ export function migrate(s) {
   s.settings = { ...d.settings, ...(s.settings || {}) };
   s.settings.increment = { ...d.settings.increment, ...(s.settings.increment || {}) };
   s.settings.bar = { ...d.settings.bar, ...(s.settings.bar || {}) };
+  s.settings.plates = { ...d.settings.plates, ...(s.settings.plates || {}) };
   s.exercises ||= d.exercises;
+  // New exercises added to the library reach existing accounts; old ones get an equipment type.
+  const have = new Set(s.exercises.map((e) => e.id));
+  for (const e of SEED_EXERCISES) if (!have.has(e.id)) s.exercises.push({ ...e });
+  for (const e of s.exercises) {
+    if (e.equipment) continue;
+    const seed = SEED_EXERCISES.find((x) => x.id === e.id);
+    e.equipment = seed?.equipment || (e.kind === 'reps' ? 'bodyweight' : 'other');
+    if (seed?.bar && !e.bar) e.bar = { ...seed.bar };
+  }
   s.routines ||= [];
   s.workouts ||= [];
   s.active ??= null;

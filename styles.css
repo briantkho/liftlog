@@ -436,3 +436,42 @@ body.signed-out .tabbar, body.loading .tabbar, body.signed-out .restbar, body.lo
 .signin-error { color: var(--danger); font-size: 14px; min-height: 1.4em; margin-top: 14px; }
 .account { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .account img { border-radius: 50%; flex: none; }
+
+/* ---------- weight math ---------- */
+.wm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.wm-head .sheet-title { margin: 0; }
+.wm-tabs { display: flex; width: 100%; margin-bottom: 16px; }
+.wm-tabs button { flex: 1; padding: 8px 6px; }
+.wm-total { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.wm-step { width: 56px; height: 56px; flex: none; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); font-size: 26px; color: var(--text); }
+.wm-step:active { transform: scale(.96); }
+.wm-total-field { flex: 1; position: relative; }
+.wm-total-field input { min-height: 56px; font: 700 32px var(--display); padding-right: 40px; }
+.wm-total-field span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 15px; }
+.wm-bars { margin-bottom: 14px; }
+.wm-bar-viz {
+  position: relative; display: flex; align-items: center; gap: 3px;
+  height: 120px; padding: 0 8px; margin: 0 0 10px;
+  background: var(--surface-2); border-radius: 14px; overflow-x: auto; scrollbar-width: none;
+}
+.wm-bar-viz::-webkit-scrollbar { display: none; }
+.wm-sleeve-end { flex: none; width: 10px; height: 34px; border-radius: 3px; background: var(--muted); }
+.wm-sleeve { flex: 1; min-width: 24px; height: 12px; border-radius: 0 6px 6px 0; background: var(--muted); opacity: .6; }
+.wm-plate, .wm-add-plate {
+  flex: none; display: grid; place-items: center; width: 30px; height: var(--h);
+  border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-ink);
+  font-weight: 700; font-size: 12px; writing-mode: vertical-rl; transform: rotate(180deg);
+  animation: plate-in .18s ease-out;
+}
+@keyframes plate-in { from { transform: rotate(180deg) scaleY(.6); opacity: 0; } }
+.wm-readout { margin: 0 0 4px; font-size: 15px; }
+.warn-text { color: var(--warm); font-size: 13.5px; margin-top: 4px; }
+.wm-hint { margin: 2px 0 10px; }
+.wm-add { display: flex; align-items: flex-end; gap: 8px; height: 84px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.wm-add::-webkit-scrollbar { display: none; }
+.wm-add-plate { width: 40px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); font-size: 13px; animation: none; }
+.wm-add-plate:active { background: var(--accent); color: var(--accent-ink); }
+.chips.wrap { flex-wrap: wrap; overflow: visible; margin: 4px 0 12px; padding: 0; }
+.wm-h { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 4px; font-weight: 500; }
+.wm-table li.list-row { min-height: 44px; padding: 8px 4px; cursor: pointer; }
+#wm-body > .btn { margin-top: 14px; }

@@ -1,5 +1,6 @@
 // Starter exercise library and plans. Users can add their own in the app.
 // kind: 'weight' = load x reps, 'reps' = bodyweight reps (optional added load)
+// equipment: decides what weight math applies (plates for barbells, per-hand for dumbbells, etc.)
 
 const ex = (name, muscle, kind = 'weight', extra = {}) => ({
   id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
@@ -12,7 +13,8 @@ export const SEED_EXERCISES = [
   ex('Incline bench press', 'Chest'),
   ex('Dumbbell bench press', 'Chest'),
   ex('Incline dumbbell press', 'Chest'),
-  ex('Cable fly', 'Chest'),
+  ex('Cable fly', 'Chest', 'weight', { repMin: 10, repMax: 15 }),
+  ex('Pec deck', 'Chest', 'weight', { repMin: 10, repMax: 15 }),
   ex('Machine chest press', 'Chest'),
   ex('Push-up', 'Chest', 'reps'),
   ex('Dip', 'Chest', 'reps'),
@@ -31,6 +33,7 @@ export const SEED_EXERCISES = [
   ex('Dumbbell shoulder press', 'Shoulders'),
   ex('Lateral raise', 'Shoulders', 'weight', { repMin: 12, repMax: 20 }),
   ex('Rear delt fly', 'Shoulders', 'weight', { repMin: 12, repMax: 20 }),
+  ex('Reverse pec deck', 'Shoulders', 'weight', { repMin: 12, repMax: 20 }),
   // Legs
   ex('Back squat', 'Legs', 'weight', { repMin: 5, repMax: 8 }),
   ex('Front squat', 'Legs', 'weight', { repMin: 5, repMax: 8 }),
@@ -54,6 +57,27 @@ export const SEED_EXERCISES = [
   ex('Cable crunch', 'Core', 'weight', { repMin: 10, repMax: 15 }),
   ex('Ab wheel', 'Core', 'reps', { repMin: 8, repMax: 15 }),
 ];
+
+const EQUIPMENT_BY_ID = {
+  barbell: ['bench-press', 'incline-bench-press', 'deadlift', 'barbell-row', 'overhead-press', 'back-squat', 'front-squat', 'romanian-deadlift', 'hip-thrust', 'barbell-curl', 'skull-crusher'],
+  dumbbell: ['dumbbell-bench-press', 'incline-dumbbell-press', 'dumbbell-row', 'dumbbell-shoulder-press', 'lateral-raise', 'rear-delt-fly', 'bulgarian-split-squat', 'walking-lunge', 'dumbbell-curl', 'hammer-curl', 'overhead-triceps-extension'],
+  cable: ['cable-fly', 'seated-cable-row', 'lat-pulldown', 'face-pull', 'triceps-pushdown', 'cable-crunch'],
+  machine: ['machine-chest-press', 'pec-deck', 'reverse-pec-deck', 'chest-supported-row', 'leg-extension', 'leg-curl', 'calf-raise'],
+  plate: ['leg-press'],
+  bodyweight: ['push-up', 'dip', 'pull-up', 'chin-up', 'hanging-leg-raise', 'ab-wheel'],
+};
+for (const [equipment, ids] of Object.entries(EQUIPMENT_BY_ID)) {
+  for (const id of ids) { const e = SEED_EXERCISES.find((x) => x.id === id); if (e) e.equipment = equipment; }
+}
+// Skull crushers are usually done with an EZ bar.
+SEED_EXERCISES.find((x) => x.id === 'skull-crusher').bar = { lb: 25, kg: 10 };
+
+export const EQUIPMENT = {
+  barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine',
+  plate: 'Plate-loaded', bodyweight: 'Bodyweight', other: 'Other',
+};
+// Equipment loaded with plates on a bar or sleeve (plate math applies).
+export const PLATE_LOADED = ['barbell', 'plate'];
 
 export const MUSCLES = ['Chest', 'Back', 'Shoulders', 'Legs', 'Glutes', 'Arms', 'Core', 'Other'];
 

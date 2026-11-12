@@ -11,7 +11,9 @@ It's a PWA: install it to your home screen and it runs full screen and offline. 
 - **PRs.** Heaviest weight, best estimated 1RM (Epley), most reps. You get a badge the moment a set beats your history, and a list at the end of the workout.
 - **Consistency.** Weekly goal ring, week streak, 16 week calendar, days since your last session, and a nudge on the home screen when the week is getting away from you.
 - **Routines that rotate.** Save your workouts (or start from a full body, upper/lower or push/pull/legs plan). The home screen shows what's next in the rotation and the weights you'll use.
-- **Gym stuff.** Rest timer that starts when you check off a set (beeps and vibrates where supported), warm-up sets that don't count toward PRs, plate calculator, lb or kg.
+- **Weight math.** One tap from any exercise or the workout header: type a total to see the plates per side, or tap plates to build a load and see the total. Pick the bar (Olympic, EZ, none for plate-loaded machines) and which plates your gym has. Warm-up ramp and percentage table rounded to weights you can actually load, a button to drop those warm-ups into your workout, and lb/kg conversion.
+- **Equipment-aware exercises.** Every exercise is tagged barbell, dumbbell, cable, machine, plate-loaded or bodyweight, so look-alikes like Cable fly and Pec deck stay separate with their own history and PRs.
+- **Gym stuff.** Rest timer that starts when you check off a set (beeps and vibrates where supported), warm-up sets that don't count toward PRs, lb or kg.
 - **History.** Every session, editable after the fact. Forgot to log yesterday? "Log past" lets you backfill it.
 - **Charts** per exercise: e1RM, top set, reps, volume.
 - **Google sign-in and cloud sync.** Workouts save to Firestore under your account. An offline copy stays on the device so you can log sets with no signal; changes upload when you reconnect.
@@ -95,6 +97,7 @@ python3 -m http.server 8000
 | `js/vendor/firebase.js` | Bundled Firebase SDK |
 | `js/app.js` | Router, sign-in screen, every app screen, rest timer |
 | `js/seed.js` | Starter exercise library and plans |
+| `js/calc.js` | Weight math sheet: plates, warm-ups and percentages, lb/kg |
 | `js/chart.js` | SVG line chart with hover/tap tooltip |
 | `js/ui.js` | DOM helpers, bottom sheets, toasts, rest timer beep |
 | `sw.js` | Offline cache |
