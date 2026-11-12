@@ -4,7 +4,6 @@ import { $, $$, esc, toast, relDay, daysSince, fmtDate, fmtTime, fmtDur, fmtMins
 import { lineChart } from './chart.js';
 import { MUSCLES, STARTER_PLANS, EQUIPMENT } from './seed.js';
 import { openWeightMath } from './calc.js';
-import { watchViewport, viewportInfo } from './viewport.js';
 import * as Cloud from './sync.js';
 
 const view = $('#view');
@@ -37,7 +36,7 @@ function route() {
       if (!same) closeSheet(true);
       $$('.tabbar a').forEach((a) => a.classList.toggle('active', a.dataset.tab === tab));
       fn(...m.slice(1).map(decodeURIComponent));
-      if (!same) { view.scrollTo(0, 0); view.focus({ preventScroll: true }); }
+      if (!same) { window.scrollTo(0, 0); view.focus({ preventScroll: true }); }
       return;
     }
   }
@@ -955,7 +954,6 @@ function renderSettings() {
     <h2 class="section-label">Danger zone</h2>
     <section class="card"><button class="btn danger block" data-action="reset">Erase all data</button></section>
     <p class="muted small center">Liftlog · ${st().workouts.length} workouts stored</p>
-    <p class="muted small center diag">Screen ${viewportInfo.screen} · window ${viewportInfo.inner} · fixed ${viewportInfo.fixed} · using ${viewportInfo.used}${viewportInfo.patched ? ' (iOS fix on)' : ''}</p>
   `;
   $('#set-auto').addEventListener('change', (e) => { s.autoRest = e.target.checked; save(); });
   $('#set-inc').addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (v > 0) { s.increment[s.unit] = v; save(); } });
@@ -1084,7 +1082,6 @@ document.addEventListener('click', async (e) => {
 
 /* ================= boot ================= */
 
-watchViewport();
 
 function start() {
   appReady = true;

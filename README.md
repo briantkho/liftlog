@@ -100,7 +100,6 @@ python3 -m http.server 8000
 | `js/calc.js` | Weight math sheet: plates, warm-ups and percentages, lb/kg |
 | `js/chart.js` | SVG line chart with hover/tap tooltip |
 | `js/ui.js` | DOM helpers, bottom sheets, toasts, rest timer beep |
-| `js/viewport.js` | Measures the real app height (works around the iOS home screen short-viewport bug) |
 | `sw.js` | Offline cache |
 
 Weights are stored in kg internally and converted for display, so switching units never corrupts history.
